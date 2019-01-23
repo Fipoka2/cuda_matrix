@@ -44,12 +44,12 @@ int main() {
     Matrix res = getRandArray(MATRIX_SIZE);
 
     m_time globalTime;
-
+    MatrixResult r;
     std::cout<<"start calculating..."<<std::endl;
     for (int i = 0; i< RUNS; ++i) {
 
         memoryType t = global;
-        MatrixResult r = cudaCalc(a,b,c, res, t);
+         r = cudaCalc(a,b,c, res, t);
 
         globalTime.max = globalTime.max < r.time.total ? r.time.total : globalTime.max;
         globalTime.min = globalTime.min > r.time.total ? r.time.total: globalTime.min;
@@ -58,13 +58,15 @@ int main() {
     }
     globalTime.average = globalTime.average / RUNS;
 
+    std::cout<<"copy to device "<< r.time.toDevice<<std::endl;
+    std::cout<<"kernel "<< r.time.kernel<<std::endl;
+    std::cout<<"copy to host "<< r.time.toHost<<std::endl;
     std::cout<< "Average time using global memory (ms): "<< globalTime.average<<std::endl;
     std::cout<< "Min time using global memory: "<< globalTime.min<<std::endl;
     std::cout<< "Max time using global memory: "<< globalTime.max<<std::endl<<std::endl;
 
     //shared
     m_time sharedTime;
-    MatrixResult r;
     for (int i = 0; i< RUNS; ++i) {
 
         memoryType t = shared;
