@@ -12,13 +12,11 @@ struct m_time {
     double max = 0;
 };
 
-void print(Matrix a, Matrix b, Matrix c, Matrix res, Matrix paral) {
+void print(Matrix a, Matrix b, Matrix res, Matrix paral) {
     std::cout << "a"<< endl;
     printMatrix(a);
     std::cout << "b"<< endl;
     printMatrix(b);
-    std::cout << "c"<< endl;
-    printMatrix(c);
     std::cout << "res"<< endl;
     printMatrix(res);
     std::cout << "parallel"<< endl;
@@ -26,21 +24,12 @@ void print(Matrix a, Matrix b, Matrix c, Matrix res, Matrix paral) {
 }
 
 int main() {
-//
-//    int deviceCount;
-//    cudaDeviceProp deviceProp;
-//
-//    //Сколько устройств CUDA установлено на PC.
-//    cudaGetDeviceCount(&deviceCount);
-//
-//    printf("Device count: %d\n\n", deviceCount);
 
-    const size_t MATRIX_SIZE = 5000;
+    const size_t MATRIX_SIZE = 10;
     const unsigned short int RUNS = 5;
 
     Matrix a = getRandArray(MATRIX_SIZE);
     Matrix b = getRandArray(MATRIX_SIZE);
-    Matrix c = getRandArray(MATRIX_SIZE);
     Matrix res = getRandArray(MATRIX_SIZE);
 
     m_time globalTime;
@@ -49,7 +38,7 @@ int main() {
     for (int i = 0; i< RUNS; ++i) {
 
         memoryType t = global;
-         r = cudaCalc(a,b,c, res, t);
+         r = cudaCalc(a,b, res, t);
 
         globalTime.max = globalTime.max < r.time.total ? r.time.total : globalTime.max;
         globalTime.min = globalTime.min > r.time.total ? r.time.total: globalTime.min;
@@ -70,7 +59,7 @@ int main() {
     for (int i = 0; i< RUNS; ++i) {
 
         memoryType t = shared;
-        r = cudaCalc(a,b,c, res, t);
+        r = cudaCalc(a,b, res, t);
 
         sharedTime.max = sharedTime.max < r.time.total ? r.time.total : sharedTime.max;
         sharedTime.min = sharedTime.min > r.time.total ? r.time.total: sharedTime.min;
@@ -90,8 +79,6 @@ int main() {
         printMatrix(a);
         std::cout<<"matrix B"<<std::endl;
         printMatrix(b);
-        std::cout<<"matrix C"<<std::endl;
-        printMatrix(c);
         std::cout<<"result"<<std::endl;
         printMatrix(res);
     }

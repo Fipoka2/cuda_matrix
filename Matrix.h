@@ -41,9 +41,6 @@ Matrix getRandArray(size_t str, size_t col);
 Matrix getRandArray(size_t size);
 Matrix createMatrix(size_t str, size_t col);
 void printMatrix(Matrix m);
-//MatrixResult constCalculate(Matrix a, Matrix b, Matrix c);
-//void sharedCalculate(Matrix a, Matrix b, Matrix c);
-//__global__ void globalCalculate(Matrix a, Matrix b, Matrix c);
-MatrixResult cudaCalc(Matrix& a, Matrix& b, Matrix &c, Matrix& result, memoryType type);
+MatrixResult cudaCalc(Matrix& a, Matrix& b, Matrix& result, memoryType type);
 
 #endif

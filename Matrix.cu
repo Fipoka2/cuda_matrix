@@ -10,13 +10,9 @@ namespace {
     const unsigned int MAX_BLOCKS = 2147483647;
 };
 
-double omp_get_wtime() {
-    return 1.0;
-}
-
 std::random_device rd;
 std::mt19937 mt(rd());
-std::uniform_int_distribution<int> dist(1, 1000);
+std::uniform_int_distribution<int> dist(1, 10);
 
 Matrix getRandArray(size_t str, size_t col) {
     int *arr = new int[col * str];
@@ -73,32 +69,28 @@ void printMatrix(Matrix m) {
 }
 
 __global__ void
-sharedCalculate(int *dev_a, int *dev_b, int *dev_c, int *dev_res, unsigned int total) {
+sharedCalculate(int *dev_a, int *dev_b, int *dev_res, unsigned int total) {
 
     __shared__ int temp[1024];
 
     int i = blockDim.x * blockIdx.x + threadIdx.x;
 
     if (i <= total) {
-        temp[threadIdx.x] = dev_a[i] > dev_b[i]
-                     ? (dev_a[i] > dev_c[i] ? dev_a[i] : dev_c[i])
-                     : (dev_b[i] > dev_c[i] ? dev_b[i] : dev_c[i]);
+        temp[threadIdx.x] = dev_a[i]*dev_b[i];
     }
     __syncthreads();
     dev_res[i] = temp[threadIdx.x];
 }
 
 __global__ void
-globalCalculate(int *dev_a, int *dev_b, int *dev_c, int *dev_res, unsigned int total) {
+globalCalculate(int *dev_a, int *dev_b, int *dev_res, unsigned int total) {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i <= total) {
-        dev_res[i] = dev_a[i] > dev_b[i]
-                     ? (dev_a[i] > dev_c[i] ? dev_a[i] : dev_c[i])
-                     : (dev_b[i] > dev_c[i] ? dev_b[i] : dev_c[i]);
+        dev_res[i] = dev_a[i]*dev_b[i];
     }
 }
 
-MatrixResult cudaCalc(Matrix& a, Matrix& b, Matrix& c, Matrix &result, memoryType type) {
+MatrixResult cudaCalc(Matrix& a, Matrix& b, Matrix &result, memoryType type) {
 
     //time part
     cudaEvent_t copyToDevice, copyToHost, start, stop;
@@ -111,20 +103,17 @@ MatrixResult cudaCalc(Matrix& a, Matrix& b, Matrix& c, Matrix &result, memoryTyp
 
     int *dev_a = nullptr;
     int *dev_b = nullptr;
-    int *dev_c = nullptr;
     int *dev_res = nullptr;
 
     cudaSetDevice(0);
     cudaMalloc((void **) &dev_a, a.strings * a.columns * sizeof(int));
     cudaMalloc((void **) &dev_b, b.strings * b.columns * sizeof(int));
-    cudaMalloc((void **) &dev_c, c.strings * c.columns * sizeof(int));
     cudaMalloc((void **) &dev_res, result.strings * result.columns * sizeof(int));
 
     cudaMemcpy(dev_a, a.data, a.strings * a.columns * sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(dev_b, b.data, b.strings * b.columns * sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_c, c.data, c.strings * c.columns * sizeof(int), cudaMemcpyHostToDevice);
 
-    const unsigned int total = c.strings * c.columns;
+    const unsigned int total = a.strings * a.columns;
     const unsigned int numBlocks = floor(double(total / MAX_THREADS)) + 1;
 
     cudaEventRecord ( start, 0 );
@@ -132,11 +121,11 @@ MatrixResult cudaCalc(Matrix& a, Matrix& b, Matrix& c, Matrix &result, memoryTyp
     // Kernel invocation
     switch(type) {
         case global: {
-            globalCalculate <<< numBlocks, MAX_THREADS >>> (dev_a, dev_b, dev_c, dev_res, total);
+            globalCalculate <<< numBlocks, MAX_THREADS >>> (dev_a, dev_b, dev_res, total);
             break;
         }
         case shared: {
-            sharedCalculate <<< numBlocks, MAX_THREADS >>> (dev_a, dev_b, dev_c, dev_res, total);
+            sharedCalculate <<< numBlocks, MAX_THREADS >>> (dev_a, dev_b, dev_res, total);
             break;
         }
         default:
@@ -149,7 +138,6 @@ MatrixResult cudaCalc(Matrix& a, Matrix& b, Matrix& c, Matrix &result, memoryTyp
     cudaDeviceSynchronize();
     cudaMemcpy(result.data, dev_res, result.strings * result.columns * sizeof(int),
                cudaMemcpyDeviceToHost);
-    cudaFree(dev_c);
     cudaFree(dev_a);
     cudaFree(dev_b);
     cudaFree(dev_res);
